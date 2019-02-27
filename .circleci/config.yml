@@ -24,19 +24,24 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Install Pentagon
+          name: Build Docker Image
           command: |
+            docker build -t pentagon .
+      - run:
+          name: Test Migration
+          command: |
+            last_version=$(pip install pentagon==  2>&1 | grep "Could not find" | awk -F',' '{ print $(NF -1) }' | sed s/[[:blank:]]/''/g)
+            sudo pip install pentagon==${last_version}
+            pentagon start-project migration-test
+            cd migration-test
+            export $INFRASTRUCTURE_REPO=$(PWD)
             sudo pip install -e .
+            pentagon migrate --yes
       - run:
           name: Unit Tests
           command: |
             sudo pip install -r ${HOME}/pentagon/tests/requirements.txt
             nosetests
-      - run:
-          name: Build Docker Image
-          command: |
-            docker build -t pentagon .
-
       - run:
           name: Test Start Project
           command: |
